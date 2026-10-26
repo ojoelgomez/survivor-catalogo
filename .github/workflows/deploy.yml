@@ -1,0 +1,61 @@
+# Genera el catálogo (imágenes optimizadas + data/catalog.json) y publica el sitio en GitHub Pages.
+# Corre en cada push a main y también se puede lanzar a mano desde la pestaña Actions.
+name: Publicar catálogo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generar catálogo e imágenes
+        run: node scripts/build-catalog.js
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Armar el sitio
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          mkdir -p _site
+          cp -r index.html css js assets img data _site/
+          [ -f CNAME ] && cp CNAME _site/ || true
+          # Enlaces absolutos para Open Graph (WhatsApp, Instagram).
+          sed -i "s#https://SITE_URL#${BASE_URL%/}#g" _site/index.html
+          grep -o 'og:image" content="[^"]*' _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

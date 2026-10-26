@@ -1,0 +1,14 @@
+{
+  "_ayuda": "Opcional. 'teams' cambia datos por equipo (name, league, color, order). 'products' usa el id del producto (ver data/catalog.json) y acepta name, kind, color, order, cover (archivo de portada), tags, hidden. Menor 'order' = sale primero.",
+  "price": 159000,
+  "whatsapp": "573113348648",
+  "teams": {
+    "Real Madrid": { "order": 10 },
+    "Barcelona": { "order": 20 },
+    "Argentina": { "order": 30 },
+    "Brasil": { "order": 40 },
+    "Manchester City": { "order": 50 },
+    "PSG": { "order": 60 }
+  },
+  "products": {}
+}

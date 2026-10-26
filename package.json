@@ -1,0 +1,13 @@
+{
+  "name": "survivor-catalogo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Catálogo estático de camisetas SURVIVOR",
+  "scripts": {
+    "build": "node scripts/build-catalog.js",
+    "serve": "npx --yes http-server -p 8080 -c-1 ."
+  },
+  "dependencies": {
+    "sharp": "^0.34.4"
+  }
+}
