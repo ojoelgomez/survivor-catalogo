@@ -419,6 +419,34 @@ html.has-sheet { overflow: hidden; }
 .wa-btn[aria-disabled='true'] { background: #2f3a33; color: #9aa59e; }
 .order__clear { justify-self: center; border: 0; background: none; color: var(--muted); font-size: .8rem; text-decoration: underline; padding: 6px; }
 
+/* ---------- Personalización (nombre y número) ---------- */
+.sheet__custom {
+  margin: 14px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line);
+  color: #d4d4d8; font-size: .85rem;
+}
+.sheet__custom strong { color: var(--lime); }
+.custom { margin-top: 10px; }
+.custom__toggle {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  min-height: 40px; font-size: .82rem; font-weight: 600;
+}
+.custom__toggle input { width: 20px; height: 20px; accent-color: var(--lime); flex: none; margin: 0; }
+.custom__toggle span { flex: 1; }
+.custom__toggle strong { color: var(--lime); white-space: nowrap; }
+.custom__fields { display: grid; grid-template-columns: 1fr 76px; gap: 8px; margin-top: 4px; }
+.custom__field { display: grid; gap: 4px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.custom__field input {
+  width: 100%; height: 44px; padding: 0 10px;
+  border: 1.5px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--text);
+  font: 400 1.15rem/1 var(--display); letter-spacing: .06em; text-transform: uppercase;
+}
+.custom__field--number input { text-align: center; }
+.custom__field input:focus { outline: none; border-color: var(--lime); box-shadow: 0 0 0 3px rgba(212, 255, 58, .15); }
+.custom__field input::placeholder { color: #52525b; }
+.order__total small { display: block; font-size: .75rem; font-weight: 500; color: var(--lime); }
+
 .empty__btn { display: inline-flex; padding: 0 26px; margin-top: 18px; }
 .add--big.is-off { background: var(--surface-2); color: var(--muted); border: 1.5px dashed var(--line); }
 .size-warn { margin: 8px 0 0; color: #ffb020; font-size: .85rem; font-weight: 600; }

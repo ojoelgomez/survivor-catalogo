@@ -103,6 +103,7 @@ Cada camiseta tiene un `id` hecho con el equipo y la carpeta. Ejemplo: `fotos/Re
 
 - **Frase del encabezado:** con 11 equipos o menos dice "11 gigantes. 1 precio. $159.000"; con más, "Los gigantes del fútbol".
 - **Imagen para compartir:** se arma con las portadas de los 4 primeros equipos.
+- **Personalización (nombre y número):** cuesta `customPrice` en `data/overrides.json` (hoy 15000). El cliente la activa por camiseta en su pedido; el nombre admite hasta 12 letras y el número de 0 a 99.
 - **Cambio de precio:** cambia `price` en `data/overrides.json`, y también el texto `$159.000` en `index.html` (encabezado y descripción) y en `js/app.js` (`TAGLINE_SMALL`).
 
 ---

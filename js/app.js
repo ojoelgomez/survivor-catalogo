@@ -2,7 +2,7 @@
 // Cada tarjeta es un equipo; sus camisetas (local, visitante, retro…) son versiones dentro de la tarjeta.
 
 import { createViewer } from './viewer.js';
-import { createCart, orderMessage, waLink, SIZES } from './cart.js';
+import { createCart, orderMessage, waLink, totals, isCustom, SIZES } from './cart.js';
 
 const TAGLINE_SMALL = '11 gigantes. 1 precio. <em>$159.000</em>';
 const TAGLINE_BIG = 'Los gigantes <em>del fútbol</em>';
@@ -191,7 +191,8 @@ function renderSheetActions(box, v) {
     <button type="button" class="add add--big${sheetSize ? '' : ' is-off'}" data-sheet-add="${v.id}" aria-describedby="size-warn">
       ${sheetSize ? `Agregar talla ${sheetSize}` : 'Elige una talla'}
     </button>
-    ${n ? `<p class="sheet__added">✓ Tienes ${n} de esta en tu selección</p>` : ''}`;
+    ${n ? `<p class="sheet__added">✓ Tienes ${n} de esta en tu selección</p>` : ''}
+    <p class="sheet__custom"><strong>¿Con tu nombre y número?</strong> Personalízala por +${money(catalog.customPrice)}. Lo eliges en tu pedido.</p>`;
   box.onclick = e => {
     const size = e.target.closest('.size');
     if (size) { sheetSize = size.dataset.size === sheetSize ? null : size.dataset.size; return renderSheetActions(box, v); }
@@ -248,7 +249,7 @@ function renderBag() {
   $('#dock').classList.toggle('has-bag', n > 0);
   $('#bag-count').textContent = n;
   $('#bag-label').textContent = n === 1 ? 'seleccionada' : 'seleccionadas';
-  $('#bag-total').textContent = money(n * catalog.price);
+  $('#bag-total').textContent = money(totals(cart.lines, catalog.price, catalog.customPrice).total);
 }
 
 function renderOrder() {
@@ -264,15 +265,49 @@ function renderOrder() {
         <div class="sizes sizes--sm" role="radiogroup" aria-label="Talla de ${esc(l.product.team)} ${esc(l.product.name)}">
           ${SIZES.map(s => `<button type="button" class="size" role="radio" data-uid="${l.uid}" data-size="${s}" aria-checked="${s === l.size}">${s}</button>`).join('')}
         </div>
+        ${customHTML(l)}
       </div>
       <button type="button" class="line__remove" data-remove="${l.uid}" aria-label="Quitar ${esc(l.product.team)} ${esc(l.product.name)}">×</button>
     </li>`).join('');
+  renderOrderFoot();
+}
+
+// Nombre y número estampados: opcional por camiseta, con costo adicional.
+function customHTML(l) {
+  const c = { on: false, name: '', number: '', ...l.custom };
+  return `
+    <div class="custom${c.on ? ' is-on' : ''}">
+      <label class="custom__toggle">
+        <input type="checkbox" data-custom-on="${l.uid}" ${c.on ? 'checked' : ''}>
+        <span>Personalizar con nombre y número</span>
+        <strong>+${money(catalog.customPrice)}</strong>
+      </label>
+      <div class="custom__fields" ${c.on ? '' : 'hidden'}>
+        <label class="custom__field custom__field--name">Nombre
+          <input type="text" data-custom="name" data-uid="${l.uid}" value="${esc(c.name)}" maxlength="12"
+            placeholder="Ej. MESSI" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </label>
+        <label class="custom__field custom__field--number">Número
+          <input type="text" data-custom="number" data-uid="${l.uid}" value="${esc(c.number)}" maxlength="2"
+            placeholder="10" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+        </label>
+      </div>
+    </div>`;
+}
+
+// Totales y enlace de WhatsApp; se actualiza sola mientras escriben, sin repintar la lista.
+function renderOrderFoot() {
+  const lines = cart.lines;
+  const t = totals(lines, catalog.price, catalog.customPrice);
   const missing = lines.some(l => !l.size);
-  $('#order-count').textContent = `${lines.length} ${lines.length === 1 ? 'camiseta' : 'camisetas'}`;
-  $('#order-total').textContent = money(lines.length * catalog.price) + ' COP';
-  $('#order-send').href = missing ? '#' : waLink(catalog.whatsapp, orderMessage(lines, catalog.price, money));
+  $('#order-count').innerHTML = `${t.count} ${t.count === 1 ? 'camiseta' : 'camisetas'}` +
+    (t.custom ? `<small>${t.custom} ${t.custom === 1 ? 'personalizada' : 'personalizadas'} (+${money(t.custom * catalog.customPrice)})</small>` : '');
+  $('#order-total').textContent = money(t.total) + ' COP';
+  $('#order-send').href = missing ? '#' : waLink(catalog.whatsapp, orderMessage(lines, catalog.price, catalog.customPrice, money));
   $('#order-send').setAttribute('aria-disabled', missing);
 }
+
+let typing = false; // mientras escriben nombre/número no se repinta la lista (perdería el foco)
 
 function bindOrder() {
   const order = $('#order');
@@ -294,6 +329,24 @@ function bindOrder() {
     const rm = e.target.closest('[data-remove]');
     if (rm) cart.remove(rm.dataset.remove);
   });
+  $('#order-list').addEventListener('change', e => {
+    const box = e.target.closest('[data-custom-on]');
+    if (!box) return;
+    cart.setCustom(box.dataset.customOn, { on: box.checked });
+    if (box.checked) $(`[data-custom="name"][data-uid="${box.dataset.customOn}"]`)?.focus();
+  });
+  $('#order-list').addEventListener('input', e => {
+    const field = e.target.closest('[data-custom]');
+    if (!field) return;
+    // Nombre: letras y espacios en mayúscula. Número: 0 a 99.
+    const clean = field.dataset.custom === 'name'
+      ? field.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÜÑ .'-]/g, '').slice(0, 12)
+      : field.value.replace(/\D/g, '').slice(0, 2);
+    if (clean !== field.value) field.value = clean;
+    typing = true;
+    cart.setCustom(field.dataset.uid, { [field.dataset.custom]: clean });
+    typing = false;
+  });
   $('#order-send').addEventListener('click', e => {
     if ($('#order-send').getAttribute('aria-disabled') === 'true') {
       e.preventDefault();
@@ -314,7 +367,7 @@ function bindOrder() {
   cart.onChange(() => {
     renderBag();
     refreshAddButtons();
-    if (order.open) renderOrder();
+    if (order.open) typing ? renderOrderFoot() : renderOrder();
     if ($('#sheet').open) renderSheetActions($('#sheet-actions'), viewer.variant);
   });
 }

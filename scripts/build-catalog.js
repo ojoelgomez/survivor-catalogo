@@ -164,6 +164,7 @@ async function main() {
   const catalog = {
     generated: new Date().toISOString(),
     price: overrides.price ?? 159000,
+    customPrice: overrides.customPrice ?? 15000, // nombre y número estampados
     currency: 'COP',
     whatsapp: overrides.whatsapp ?? '573113348648',
     leagues: LEAGUES,

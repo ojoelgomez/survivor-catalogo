@@ -29,6 +29,11 @@ export function createCart(products) {
       save();
     },
     setSize(uid, size) { lines = lines.map(l => l.uid === uid ? { ...l, size } : l); save(); },
+    // custom = { on, name, number }: nombre y número estampados en la espalda.
+    setCustom(uid, patch) {
+      lines = lines.map(l => l.uid === uid ? { ...l, custom: { on: false, name: '', number: '', ...l.custom, ...patch } } : l);
+      save();
+    },
     remove(uid) { lines = lines.filter(l => l.uid !== uid); save(); },
     clear() { lines = []; save(); },
     onChange(fn) { listeners.add(fn); fn(api); },
@@ -36,14 +41,25 @@ export function createCart(products) {
   return api;
 }
 
+// Sólo cuenta como personalizada si está activada y tiene nombre o número.
+export const isCustom = l => !!(l.custom?.on && (l.custom.name.trim() || l.custom.number));
+const customText = c => [c.name.trim().toUpperCase(), c.number && `#${c.number}`].filter(Boolean).join(' ');
+
+export function totals(lines, price, customPrice) {
+  const custom = lines.filter(isCustom).length;
+  return { count: lines.length, custom, total: lines.length * price + custom * customPrice };
+}
+
 // Mensaje del pedido, en el formato acordado con la tienda.
-export function orderMessage(lines, price, money) {
-  const items = lines.map((l, i) => `${i + 1}. ${l.product.team} – ${l.product.name} – Talla ${l.size}`);
-  const n = lines.length;
+export function orderMessage(lines, price, customPrice, money) {
+  const items = lines.map((l, i) => `${i + 1}. ${l.product.team} – ${l.product.name} – Talla ${l.size}` +
+    (isCustom(l) ? ` – Personalizada: ${customText(l.custom)} (+${money(customPrice)})` : ''));
+  const t = totals(lines, price, customPrice);
+  const extra = t.custom ? ` (${t.custom} ${t.custom === 1 ? 'personalizada' : 'personalizadas'})` : '';
   return [
     'Hola Survivor 👋 Me interesan estas camisetas:',
     ...items,
-    `Total: ${n} ${n === 1 ? 'camiseta' : 'camisetas'} – ${money(n * price)} COP`,
+    `Total: ${t.count} ${t.count === 1 ? 'camiseta' : 'camisetas'}${extra} – ${money(t.total)} COP`,
   ].join('\n');
 }
 
