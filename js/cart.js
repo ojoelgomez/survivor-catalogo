@@ -24,8 +24,9 @@ export function createCart(products) {
     get lines() { return lines.map(l => ({ ...l, product: byId.get(l.id) })); },
     get count() { return lines.length; },
     countOf: id => lines.filter(l => l.id === id).length,
-    add(id, size = null) {
-      lines = [...lines, { uid: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), id, size }];
+    add(id, size = null, custom = null) {
+      const uid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      lines = [...lines, { uid, id, size, ...(custom && { custom: { ...custom, on: true } }) }];
       save();
     },
     setSize(uid, size) { lines = lines.map(l => l.uid === uid ? { ...l, size } : l); save(); },

@@ -178,8 +178,16 @@ function refreshAddButtons() {
   for (const b of document.querySelectorAll('#grid .add')) b.outerHTML = addButtonHTML(b.dataset.add);
 }
 
-// Botones de talla y "Agregar" dentro de la ficha ampliada.
+// Talla, personalización y "Agregar" dentro de la ficha ampliada.
+// Todo se elige aquí, para que el total del pedido ya incluya la personalización.
 let sheetSize = null;
+let sheetCustom = { on: false, name: '', number: '' };
+const sheetAddLabel = () => {
+  if (!sheetSize) return 'Elige una talla';
+  const custom = isCustom({ custom: sheetCustom });
+  return `Agregar talla ${sheetSize}${custom ? ' personalizada' : ''} · ${money(catalog.price + (custom ? catalog.customPrice : 0))}`;
+};
+
 function renderSheetActions(box, v) {
   const n = cart.countOf(v.id);
   box.innerHTML = `
@@ -188,21 +196,42 @@ function renderSheetActions(box, v) {
       ${SIZES.map(s => `<button type="button" class="size" role="radio" data-size="${s}" aria-checked="${s === sheetSize}">${s}</button>`).join('')}
     </div>
     <p class="size-warn" id="size-warn" hidden>Elige una talla para agregarla.</p>
-    <button type="button" class="add add--big${sheetSize ? '' : ' is-off'}" data-sheet-add="${v.id}" aria-describedby="size-warn">
-      ${sheetSize ? `Agregar talla ${sheetSize}` : 'Elige una talla'}
-    </button>
-    ${n ? `<p class="sheet__added">✓ Tienes ${n} de esta en tu selección</p>` : ''}
-    <p class="sheet__custom"><strong>¿Con tu nombre y número?</strong> Personalízala por +${money(catalog.customPrice)}. Lo eliges en tu pedido.</p>`;
+    ${customHTML('sheet', sheetCustom)}
+    <button type="button" class="add add--big${sheetSize ? '' : ' is-off'}" data-sheet-add="${v.id}" aria-describedby="size-warn">${sheetAddLabel()}</button>
+    ${n ? `<p class="sheet__added">✓ Tienes ${n} de esta en tu selección</p>` : ''}`;
   box.onclick = e => {
     const size = e.target.closest('.size');
     if (size) { sheetSize = size.dataset.size === sheetSize ? null : size.dataset.size; return renderSheetActions(box, v); }
     if (e.target.closest('[data-sheet-add]')) {
       if (!sheetSize) return warnSize(box);
-      cart.add(v.id, sheetSize);
+      cart.add(v.id, sheetSize, isCustom({ custom: sheetCustom }) ? sheetCustom : null);
+      sheetSize = null;
+      sheetCustom = { on: false, name: '', number: '' };
       bump();
       renderSheetActions(box, v);
     }
   };
+  box.onchange = e => {
+    if (!e.target.matches('[data-custom-on]')) return;
+    sheetCustom = { ...sheetCustom, on: e.target.checked };
+    renderSheetActions(box, v);
+    if (sheetCustom.on) box.querySelector('[data-custom="name"]').focus();
+  };
+  box.oninput = e => {
+    const field = e.target.closest('[data-custom]');
+    if (!field) return;
+    sheetCustom = { ...sheetCustom, [field.dataset.custom]: cleanCustomInput(field) };
+    box.querySelector('[data-sheet-add]').textContent = sheetAddLabel();
+  };
+}
+
+// Nombre: letras y espacios en mayúscula (máx. 12). Número: 0 a 99.
+function cleanCustomInput(field) {
+  const clean = field.dataset.custom === 'name'
+    ? field.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÜÑ .'-]/g, '').slice(0, 12)
+    : field.value.replace(/\D/g, '').slice(0, 2);
+  if (clean !== field.value) field.value = clean;
+  return clean;
 }
 
 function warnSize(box) {
@@ -211,29 +240,6 @@ function warnSize(box) {
   sizes.classList.remove('is-shake');
   void sizes.offsetWidth;
   sizes.classList.add('is-shake');
-}
-
-// En la tarjeta, "Agregar" abre un selector de talla; la camiseta se agrega al elegirla.
-function openPicker(card, id) {
-  closePickers();
-  const p = catalog.products.find(x => x.id === id);
-  card.classList.add('is-picking');
-  card.querySelector('.card__foot').insertAdjacentHTML('afterend', `
-    <div class="picker" role="group" aria-label="Elige la talla de ${esc(p.team)} ${esc(p.name)}">
-      <div class="picker__head"><span>Elige tu talla</span>
-        <button type="button" class="picker__close" aria-label="Cancelar">×</button></div>
-      <div class="sizes sizes--sm">
-        ${SIZES.map(s => `<button type="button" class="size" data-pick="${s}">${s}</button>`).join('')}
-      </div>
-    </div>`);
-  card.querySelector('.picker .size').focus();
-}
-
-function closePickers() {
-  for (const c of document.querySelectorAll('.card.is-picking')) {
-    c.classList.remove('is-picking');
-    c.querySelector('.picker')?.remove();
-  }
 }
 
 function bump() {
@@ -265,7 +271,7 @@ function renderOrder() {
         <div class="sizes sizes--sm" role="radiogroup" aria-label="Talla de ${esc(l.product.team)} ${esc(l.product.name)}">
           ${SIZES.map(s => `<button type="button" class="size" role="radio" data-uid="${l.uid}" data-size="${s}" aria-checked="${s === l.size}">${s}</button>`).join('')}
         </div>
-        ${customHTML(l)}
+        ${customHTML(l.uid, l.custom)}
       </div>
       <button type="button" class="line__remove" data-remove="${l.uid}" aria-label="Quitar ${esc(l.product.team)} ${esc(l.product.name)}">×</button>
     </li>`).join('');
@@ -273,22 +279,23 @@ function renderOrder() {
 }
 
 // Nombre y número estampados: opcional por camiseta, con costo adicional.
-function customHTML(l) {
-  const c = { on: false, name: '', number: '', ...l.custom };
+// uid es la línea del pedido, o "sheet" para la ficha (camiseta aún no agregada).
+function customHTML(uid, custom) {
+  const c = { on: false, name: '', number: '', ...custom };
   return `
     <div class="custom${c.on ? ' is-on' : ''}">
       <label class="custom__toggle">
-        <input type="checkbox" data-custom-on="${l.uid}" ${c.on ? 'checked' : ''}>
+        <input type="checkbox" data-custom-on="${uid}" ${c.on ? 'checked' : ''}>
         <span>Personalizar con nombre y número</span>
         <strong>+${money(catalog.customPrice)}</strong>
       </label>
       <div class="custom__fields" ${c.on ? '' : 'hidden'}>
         <label class="custom__field custom__field--name">Nombre
-          <input type="text" data-custom="name" data-uid="${l.uid}" value="${esc(c.name)}" maxlength="12"
+          <input type="text" data-custom="name" data-uid="${uid}" value="${esc(c.name)}" maxlength="12"
             placeholder="Ej. MESSI" autocomplete="off" autocapitalize="characters" spellcheck="false">
         </label>
         <label class="custom__field custom__field--number">Número
-          <input type="text" data-custom="number" data-uid="${l.uid}" value="${esc(c.number)}" maxlength="2"
+          <input type="text" data-custom="number" data-uid="${uid}" value="${esc(c.number)}" maxlength="2"
             placeholder="10" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
         </label>
       </div>
@@ -338,11 +345,7 @@ function bindOrder() {
   $('#order-list').addEventListener('input', e => {
     const field = e.target.closest('[data-custom]');
     if (!field) return;
-    // Nombre: letras y espacios en mayúscula. Número: 0 a 99.
-    const clean = field.dataset.custom === 'name'
-      ? field.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÜÑ .'-]/g, '').slice(0, 12)
-      : field.value.replace(/\D/g, '').slice(0, 2);
-    if (clean !== field.value) field.value = clean;
+    const clean = cleanCustomInput(field);
     typing = true;
     cart.setCustom(field.dataset.uid, { [field.dataset.custom]: clean });
     typing = false;
@@ -375,26 +378,22 @@ function bindOrder() {
 function bindGrid() {
   $('#grid').addEventListener('click', e => {
     const sw = e.target.closest('.version');
-    if (sw) { closePickers(); return selectVariant(sw.closest('.card'), sw.dataset.variant); }
+    if (sw) return selectVariant(sw.closest('.card'), sw.dataset.variant);
+    // "Agregar" abre la ficha en la parte de talla y personalización.
     const add = e.target.closest('[data-add]');
-    if (add) return openPicker(add.closest('.card'), add.dataset.add);
-    const pick = e.target.closest('[data-pick]');
-    if (pick) {
-      const card = pick.closest('.card');
-      cart.add(card.dataset.variant, pick.dataset.pick);
-      closePickers();
-      bump();
-      card.querySelector('.add').focus();
+    if (add) {
+      const card = add.closest('.card');
+      viewer.open(state.teams.find(t => t.team === card.dataset.team), card.dataset.variant);
+      $('#sheet-actions').scrollIntoView({ block: 'center' });
+      $('#sheet-actions .size')?.focus({ preventScroll: true });
       return;
     }
-    if (e.target.closest('.picker__close')) return closePickers();
     const open = e.target.closest('.card__open');
     if (open) {
       const card = open.closest('.card');
       viewer.open(state.teams.find(t => t.team === card.dataset.team), card.dataset.variant);
     }
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePickers(); });
 }
 
 let observer;

@@ -420,13 +420,9 @@ html.has-sheet { overflow: hidden; }
 .order__clear { justify-self: center; border: 0; background: none; color: var(--muted); font-size: .8rem; text-decoration: underline; padding: 6px; }
 
 /* ---------- Personalización (nombre y número) ---------- */
-.sheet__custom {
-  margin: 14px 0 0; padding: 10px 12px; border-radius: 12px;
-  background: var(--surface); border: 1px solid var(--line);
-  color: #d4d4d8; font-size: .85rem;
-}
-.sheet__custom strong { color: var(--lime); }
 .custom { margin-top: 10px; }
+.sheet__info .custom { margin-top: 16px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.sheet__info .custom.is-on { border-color: color-mix(in srgb, var(--lime) 50%, var(--line)); }
 .custom__toggle {
   display: flex; align-items: center; gap: 8px; cursor: pointer;
   min-height: 40px; font-size: .82rem; font-weight: 600;
@@ -452,17 +448,6 @@ html.has-sheet { overflow: hidden; }
 .size-warn { margin: 8px 0 0; color: #ffb020; font-size: .85rem; font-weight: 600; }
 .sizes.is-shake { animation: shake .4s; }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
-.picker {
-  margin-top: 8px; padding: 10px; border-radius: 12px;
-  background: var(--bg); border: 1.5px solid var(--lime);
-  animation: card-in .2s ease forwards;
-}
-.picker__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: .78rem; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: .06em; }
-.picker__close { width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--surface-2); font-size: 1.1rem; line-height: 1; }
-.picker .sizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.picker .size { min-width: 0; height: 40px; padding: 0; }
-@media (min-width: 900px) { .picker .sizes { grid-template-columns: repeat(5, 1fr); } }
-.card.is-picking .card__foot .add { display: none; }
 
 .empty { text-align: center; padding: 40px 0; color: var(--muted); }
 .empty__title { font: 400 1.6rem/1.1 var(--display); color: var(--text); text-transform: uppercase; margin: 0 0 6px; }
