@@ -4,7 +4,7 @@
 import { createViewer } from './viewer.js';
 import { createCart, orderMessage, waLink, totals, isCustom, SIZES } from './cart.js';
 
-const TAGLINE_SMALL = '11 gigantes. 1 precio. <em>$159.000</em>';
+const TAGLINE_SMALL = '11 gigantes. 1 precio. <em>$159.900</em>';
 const TAGLINE_BIG = 'Los gigantes <em>del fútbol</em>';
 const MAX_TEAMS_SMALL = 11;
 

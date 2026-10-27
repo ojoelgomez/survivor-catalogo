@@ -163,7 +163,7 @@ async function main() {
   const teams = new Set(products.map(p => p.team)).size;
   const catalog = {
     generated: new Date().toISOString(),
-    price: overrides.price ?? 159000,
+    price: overrides.price ?? 159900,
     customPrice: overrides.customPrice ?? 15000, // nombre y número estampados
     currency: 'COP',
     whatsapp: overrides.whatsapp ?? '573113348648',
