@@ -2,7 +2,7 @@
 
 Catálogo de camisetas de fútbol de SURVIVOR (Medellín). Sitio estático publicado gratis en GitHub Pages:
 
-**https://ojoelgomez.github.io/survivor-catalogo/**
+**https://survivorsports.co**
 
 Cada vez que se sube un cambio a la rama `main`, una GitHub Action optimiza las fotos, arma el catálogo y publica el sitio. Tarda unos 2 minutos.
 
