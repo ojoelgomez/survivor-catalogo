@@ -187,19 +187,52 @@ function renderSheetActions(box, v) {
     <div class="sizes" role="radiogroup" aria-labelledby="sizes-label">
       ${SIZES.map(s => `<button type="button" class="size" role="radio" data-size="${s}" aria-checked="${s === sheetSize}">${s}</button>`).join('')}
     </div>
-    <button type="button" class="add add--big" data-sheet-add="${v.id}">
-      ${sheetSize ? `Agregar talla ${sheetSize}` : 'Agregar a la selección'}
+    <p class="size-warn" id="size-warn" hidden>Elige una talla para agregarla.</p>
+    <button type="button" class="add add--big${sheetSize ? '' : ' is-off'}" data-sheet-add="${v.id}" aria-describedby="size-warn">
+      ${sheetSize ? `Agregar talla ${sheetSize}` : 'Elige una talla'}
     </button>
     ${n ? `<p class="sheet__added">✓ Tienes ${n} de esta en tu selección</p>` : ''}`;
   box.onclick = e => {
     const size = e.target.closest('.size');
     if (size) { sheetSize = size.dataset.size === sheetSize ? null : size.dataset.size; return renderSheetActions(box, v); }
     if (e.target.closest('[data-sheet-add]')) {
+      if (!sheetSize) return warnSize(box);
       cart.add(v.id, sheetSize);
       bump();
       renderSheetActions(box, v);
     }
   };
+}
+
+function warnSize(box) {
+  box.querySelector('.size-warn').hidden = false;
+  const sizes = box.querySelector('.sizes');
+  sizes.classList.remove('is-shake');
+  void sizes.offsetWidth;
+  sizes.classList.add('is-shake');
+}
+
+// En la tarjeta, "Agregar" abre un selector de talla; la camiseta se agrega al elegirla.
+function openPicker(card, id) {
+  closePickers();
+  const p = catalog.products.find(x => x.id === id);
+  card.classList.add('is-picking');
+  card.querySelector('.card__foot').insertAdjacentHTML('afterend', `
+    <div class="picker" role="group" aria-label="Elige la talla de ${esc(p.team)} ${esc(p.name)}">
+      <div class="picker__head"><span>Elige tu talla</span>
+        <button type="button" class="picker__close" aria-label="Cancelar">×</button></div>
+      <div class="sizes sizes--sm">
+        ${SIZES.map(s => `<button type="button" class="size" data-pick="${s}">${s}</button>`).join('')}
+      </div>
+    </div>`);
+  card.querySelector('.picker .size').focus();
+}
+
+function closePickers() {
+  for (const c of document.querySelectorAll('.card.is-picking')) {
+    c.classList.remove('is-picking');
+    c.querySelector('.picker')?.remove();
+  }
 }
 
 function bump() {
@@ -270,12 +303,13 @@ function bindOrder() {
   });
 
   // "¿Tu equipo no está?": si hay una búsqueda sin resultados, la incluimos en el mensaje.
-  $('#ask').addEventListener('click', () => {
+  const askHref = () => {
     const q = state.query.trim();
-    $('#ask').href = waLink(catalog.whatsapp, q
+    return waLink(catalog.whatsapp, q
       ? `Hola Survivor 👋 No encontré en el catálogo la camiseta que busco: ${q}. ¿La pueden conseguir?`
       : 'Hola Survivor 👋 No encontré mi equipo en el catálogo. Busco la camiseta de: ');
-  });
+  };
+  for (const a of [$('#ask'), $('#empty-ask')]) a.addEventListener('click', () => { a.href = askHref(); });
 
   cart.onChange(() => {
     renderBag();
@@ -288,15 +322,26 @@ function bindOrder() {
 function bindGrid() {
   $('#grid').addEventListener('click', e => {
     const sw = e.target.closest('.version');
-    if (sw) return selectVariant(sw.closest('.card'), sw.dataset.variant);
+    if (sw) { closePickers(); return selectVariant(sw.closest('.card'), sw.dataset.variant); }
     const add = e.target.closest('[data-add]');
-    if (add) { cart.add(add.dataset.add); bump(); return; }
+    if (add) return openPicker(add.closest('.card'), add.dataset.add);
+    const pick = e.target.closest('[data-pick]');
+    if (pick) {
+      const card = pick.closest('.card');
+      cart.add(card.dataset.variant, pick.dataset.pick);
+      closePickers();
+      bump();
+      card.querySelector('.add').focus();
+      return;
+    }
+    if (e.target.closest('.picker__close')) return closePickers();
     const open = e.target.closest('.card__open');
     if (open) {
       const card = open.closest('.card');
       viewer.open(state.teams.find(t => t.team === card.dataset.team), card.dataset.variant);
     }
   });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePickers(); });
 }
 
 let observer;
